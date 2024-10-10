@@ -220,8 +220,6 @@ def main() -> None:
             print("Installing with pipx...")
             install_with_pipx(temp_dir, args.force)
 
-            print("Installation complete!")
-
 
 if __name__ == "__main__":
     main()
