@@ -144,8 +144,9 @@ to-moodle-html = "to_moodle_html:main"
 
 ### Notes
 
-- Ensure that `pipx` is properly installed and available in your `PATH` before using **Slothx**.
-- The tool assumes that your Python script has a `main` function as the entry point.
+- Ensure that `pipx` is properly installed and available in your `PATH` before using Slothx.
+- The tool assumes that your Python **script has a `main` function** as the entry point.
+- Some Python packages have **different names for the import statement and the pip package**. For example, the `opencv-python` package is installed via `pip`, but imported as `cv2` in your script. Slothx may fail to detect third-party dependencies correctly in such cases.
 
 ## License
 
