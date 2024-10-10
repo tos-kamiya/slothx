@@ -1,5 +1,7 @@
 # Slothx, quick and lazy installer for standalone scripts
 
+![](slothx-mascot-hf.png)
+
 **Slothx** is a Python script that helps you easily generate a `pyproject.toml` file for your Python script, detect third-party dependencies, and install the script using `pipx`.
 This tool simplifies the process of packaging and **installing standalone Python scripts**, especially for lazy developers who want a quick way to package and deploy their scripts.
 
