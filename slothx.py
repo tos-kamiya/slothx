@@ -10,7 +10,6 @@ import argparse
 import venv
 from typing import Set, Tuple, List
 
-
 def find_third_party_packages(imports: Set[str]) -> List[str]:
     """
     Create a virtual environment, detect third-party packages, and then remove the virtual environment.
@@ -38,7 +37,6 @@ def find_third_party_packages(imports: Set[str]) -> List[str]:
     # The virtual environment is automatically deleted when the with block exits
     return third_party_packages
 
-
 def is_package_in_venv(package_name: str, venv_python: str) -> bool:
     """
     Check if a package is part of the standard library by attempting to import it in a clean virtual environment.
@@ -60,7 +58,6 @@ def is_package_in_venv(package_name: str, venv_python: str) -> bool:
         return True  # If import succeeds, it's part of the standard library
     except subprocess.CalledProcessError:
         return False  # If import fails, it's a third-party package
-
 
 def analyze_script(filepath: str) -> Tuple[Set[str], bool]:
     """
@@ -92,7 +89,6 @@ def analyze_script(filepath: str) -> Tuple[Set[str], bool]:
     )
 
     return imports, has_main
-
 
 def generate_pyproject_toml(script_name: str, dependencies: List[str]) -> str:
     """
@@ -126,7 +122,6 @@ dependencies = {dependencies}
 """
     return pyproject_content
 
-
 def create_pyproject_toml_file(
     script_name: str, dependencies: List[str], output_dir: str
 ) -> str:
@@ -147,21 +142,21 @@ def create_pyproject_toml_file(
         f.write(pyproject_content)
     return pyproject_path
 
-
 def install_with_pipx(temp_dir: str, force: bool = False) -> None:
     """
     Use pipx to install the package from the temporary directory.
 
     Args:
         temp_dir (str): The path to the temporary directory containing the script and pyproject.toml file.
+        force (bool): Whether to force installation using pipx.
     """
     cmd = [sys.executable, "-m", "pipx", "install"]  # Use the current Python interpreter to invoke pipx
     if force:
         cmd.append("--force")
     cmd.append(temp_dir)
+
+    # Run pipx, but do not print "installation complete" automatically
     subprocess.run(cmd)
-
-
 
 def main() -> None:
     """
@@ -209,17 +204,19 @@ def main() -> None:
     else:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
+            # Use the absolute path of the script to avoid issues with relative paths
+            abs_script_path = os.path.abspath(script_file)
+
             # Copy the script to the temporary directory, replacing '-' with '_' in the filename
-            filename_for_module = script_file.replace("-", "_")
-            shutil.copy(script_file, os.path.join(temp_dir, filename_for_module))
+            filename_for_module = os.path.basename(abs_script_path).replace("-", "_")
+            shutil.copy(abs_script_path, os.path.join(temp_dir, filename_for_module))
 
             # Generate pyproject.toml in the temporary directory
-            create_pyproject_toml_file(script_file, third_party_packages, temp_dir)
+            create_pyproject_toml_file(abs_script_path, third_party_packages, temp_dir)
 
             # Install with pipx
             print("Installing with pipx...")
             install_with_pipx(temp_dir, args.force)
-
 
 if __name__ == "__main__":
     main()
