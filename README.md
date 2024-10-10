@@ -12,6 +12,7 @@ This tool simplifies the process of packaging and **installing standalone Python
 - Installs your script using `pipx`.
 - Supports force installation with the `--force` option.
 - Allows viewing the generated `pyproject.toml` without installing using `--pyproject-toml`.
+- Provides a `run` command to execute your script in a virtual environment with its dependencies.
 
 ## Requirements
 
@@ -26,34 +27,61 @@ Since **Slothx** is just a Python script, you can download the script and use it
 
 ### 1. Install your Python script with `pipx`
 
-To install a Python script using **Slothx**, provide the script file as a parameter. **Slothx** will analyze the script for third-party dependencies, generate a `pyproject.toml` file, and install the script using `pipx`:
+To install a Python script using **Slothx**, you now need to use the `install` subcommand. **Slothx** will analyze the script for third-party dependencies, generate a `pyproject.toml` file, and install the script using `pipx`:
 
 ```bash
-python3 slothx.py your_script.py
+python3 slothx.py install your_script.py
 ```
 
-### 2. View the generated `pyproject.toml` without installing
-
-If you want to see what `pyproject.toml` would be generated without actually installing the script, use the `--pyproject-toml` option:
+If you want to force the installation (e.g., overwrite an existing installation), use the `--force` option with the `install` subcommand:
 
 ```bash
-python3 slothx.py your_script.py --pyproject-toml
-```
-
-This will output the contents of `pyproject.toml` to the standard output.
-
-If you want to force the installation (e.g., overwrite an existing installation), use the `--force` option:
-```bash
-python3 slothx.py your_script.py --force
+python3 slothx.py install your_script.py --force
 ```
 
 This will pass the `--force` flag to the `pipx install` command.
 
+### 2. Run your Python script with dependencies
+
+You can run a Python script directly with the `run` subcommand. **Slothx** will create a temporary virtual environment, install the script's third-party dependencies, and execute the script with any provided arguments:
+
+```bash
+python3 slothx.py run your_script.py [script_options]
+```
+
+For example, if your script accepts options or arguments:
+
+```bash
+python3 slothx.py run your_script.py --option value
+```
+
+### 3. View the generated `pyproject.toml` without installing
+
+If you want to see what `pyproject.toml` would be generated without actually installing the script, use the `--pyproject-toml` option with the `install` subcommand:
+
+```bash
+python3 slothx.py install your_script.py --pyproject-toml
+```
+
+This will output the contents of `pyproject.toml` to the standard output.
+
 ## Command-Line Options
+
+### Subcommands
+
+- `install`: Install the Python script using pipx.
+- `run`: Run the Python script in a temporary virtual environment with its dependencies.
+
+### Options for `install` subcommand
 
 - `script`: The Python script you want to analyze and install.
 - `--pyproject-toml`: Outputs the generated `pyproject.toml` file to the standard output without installing the script.
 - `--force`: Forces the installation using `pipx`, even if the script is already installed.
+
+### Options for `run` subcommand
+
+- `script`: The Python script you want to run.
+- `[script_options]`: Any arguments or options to pass to the script during execution.
 
 ## Example
 
@@ -62,22 +90,32 @@ This will pass the `--force` flag to the `pipx install` command.
 Let's say you have a script called `to_moodle_html.py` that imports the `requests` library. You can install it using **Slothx** as follows:
 
 ```bash
-python3 slothx.py to_moodle_html.py
+python3 slothx.py install to_moodle_html.py
 ```
 
 **Slothx** will:
 
 1. Analyze the script for imports.
-2. Identify for each of the dependencies is a third-party dependency.
-3. Generate a `pyproject.toml` file, including `dependences` section.
+2. Identify each dependency as a third-party package or part of the standard library.
+3. Generate a `pyproject.toml` file, including the `dependencies` section.
 4. Install the script using `pipx`.
+
+### Running a Script with Dependencies
+
+You can run the script directly in a temporary virtual environment, with all necessary dependencies installed:
+
+```bash
+python3 slothx.py run to_moodle_html.py section-1.md
+```
+
+This will automatically create a virtual environment, install the `requests` library (and any other dependencies), and execute the script.
 
 ### Viewing the `pyproject.toml` Without Installing
 
 You can view the generated `pyproject.toml` without installing:
 
 ```bash
-python3 slothx.py to_moodle_html.py --pyproject-toml
+python3 slothx.py install to_moodle_html.py --pyproject-toml
 ```
 
 This will output something like:
