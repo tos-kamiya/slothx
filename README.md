@@ -145,7 +145,7 @@ The installation process with **Slothx** goes through the following steps:
 
 ## Pinning Support<a id="pinning-support"></a>
 
-Pinning requires `pipx` version 1.6 or later. If you are using an older version (e.g., `pipx` 1.4 on Ubuntu 24.04 via `apt`), the pinning feature will not be available.
+Pinning requires **`pipx` version 1.6 or later**. If you are using `pipx` version 1.4 installed with `apt install pipx` in Ubuntu 24.04, the pinning feature will not be available.
 
 Pinning prevents `pipx upgrade-all` from attempting to upgrade the installed package. Since `Slothx` installs scripts from a temporary directory, there will be no updates available for these packages, and attempting to upgrade them will result in warnings like the following:
 
