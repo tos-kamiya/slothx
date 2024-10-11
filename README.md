@@ -7,21 +7,20 @@ This tool simplifies the process of packaging and **installing standalone Python
 
 ## Features
 
-- Automatically detects third-party dependencies in your script.
-- Generates a `pyproject.toml` file with the correct dependencies.
-- Installs your script using `pipx`.
-- Supports force installation with the `--force` option.
+- Installs your script using `pipx` with automatic detection of third party dependencies.
+- Run your script with its dependencies.
 - Allows viewing the generated `pyproject.toml` without installing using `--pyproject-toml`.
-- Provides a `run` command to execute your script in a virtual environment with its dependencies.
 
 ## Requirements
 
-- Python 3.6 or later
+- Python 3.10 or later
 - `pipx` installed (You can install it via `pip install pipx`)
 
 ## Installation
 
-Since **Slothx** is just a Python script, you can download the script and use it directly:
+Since **Slothx** is just a Python script, you can download the script and use it directly.
+
+If you want to run it as a command, put the script in any directory of your choice (e.g., `~/bin`) and make sure that the file has execute permissions (`chmod +x slothx`).
 
 ## Usage
 
@@ -40,6 +39,14 @@ python3 slothx.py install your_script.py --force
 ```
 
 This will pass the `--force` flag to the `pipx install` command.
+
+If you don't want to pin the installed package version, you can use the `--no-pinning` option:
+
+```bash
+python3 slothx.py install your_script.py --no-pinning
+```
+
+By default, **Slothx** attempts to pin the installed package to prevent upgrades, but the `--no-pinning` option will skip this step.
 
 ### 2. Run your Python script with dependencies
 
@@ -77,6 +84,7 @@ This will output the contents of `pyproject.toml` to the standard output.
 - `script`: The Python script you want to analyze and install.
 - `--pyproject-toml`: Outputs the generated `pyproject.toml` file to the standard output without installing the script.
 - `--force`: Forces the installation using `pipx`, even if the script is already installed.
+- `--no-pinning`: Skips pinning the installed package to prevent upgrades by `pipx`.
 
 ### Options for `run` subcommand
 
@@ -99,6 +107,12 @@ python3 slothx.py install to_moodle_html.py
 2. Identify each dependency as a third-party package or part of the standard library.
 3. Generate a `pyproject.toml` file, including the `dependencies` section.
 4. Install the script using `pipx`.
+
+If you want to skip pinning during installation, use the `--no-pinning` option:
+
+```bash
+python3 slothx.py install to_moodle_html.py --no-pinning
+```
 
 ### Running a Script with Dependencies
 
@@ -136,6 +150,8 @@ to-moodle-html = "to_moodle_html:main"
 ```
 
 ## How It Works
+
+The installation process with **Slothx** goes through the following steps:
 
 1. **Script Analysis**: **Slothx** uses Python's `ast` module to parse the script and extract all `import` statements. It checks for the existence of a `main` function in the script.
 2. **Dependency Detection**: It creates a temporary virtual environment to differentiate between standard library modules and third-party packages. Third-party packages are identified as those that cannot be imported in a clean virtual environment.
