@@ -11,6 +11,9 @@ import venv
 from typing import Set, Tuple, List
 
 
+VERSION = "0.3.0"
+
+
 def find_third_party_packages(imports: Set[str]) -> List[str]:
     """
     Create a virtual environment, detect third-party packages, and then remove the virtual environment.
@@ -261,6 +264,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Install and run standalone Python scripts with pipx."
     )
+    parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Install subcommand
