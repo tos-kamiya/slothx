@@ -165,3 +165,7 @@ This warning occurs because the package was installed from a temporary directory
 ## License
 
 This project is licensed under the MIT License.
+
+## Changelog
+
+* v0.4.0: Experimental support for uv-script style dependencies to enhance convenience and interoperability. For details on uv-script style dependencies, see: https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies
