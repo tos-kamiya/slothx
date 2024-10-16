@@ -2,16 +2,128 @@
 
 import ast
 import os.path as op
+import re
 import sys
 import subprocess
 import shutil
 import tempfile
 import argparse
 import venv
-from typing import Set, Tuple, List
+from typing import List, Optional, Set, Tuple
 
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
+
+
+class InvalidDependenciesSection(ValueError):
+    """Exception raised when the dependencies section is not properly closed."""
+    pass
+
+
+def parse_uv_script_style_dependencies(text: str) -> Optional[List[str]]:
+    """
+    Parses the uv-script style dependencies section from the given text.
+
+    Reference: https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies
+
+    This function looks for a `dependencies` section written in one or multiple lines
+    and returns a list of dependencies. If no `dependencies` section is found,
+    it returns `None`. If an empty section is found, it returns an empty list.
+
+    Args:
+        text (str): The Python script text to be parsed.
+
+    Returns:
+        Optional[List[str]]: A list of dependencies.
+            - `None`: If no `dependencies` section is found.
+            - Empty list: If the `dependencies` section is found but is empty.
+            - List: If dependencies are present in the section.
+
+    Raises:
+        InvalidDependenciesSection: If the `dependencies` section is not properly closed.
+    """
+    lines = text.split("\n")
+
+    stripped_lines = []
+    for line in lines:
+        line = line.strip()
+
+        # Skip empty lines
+        if not line:
+            continue
+
+        # Stop parsing if the line does not start with "#"
+        # (dependencies are expected at the top of the file).
+        if not line.startswith("#"):
+            break
+
+        # Remove leading "# " and trailing comments
+        line = re.sub(r'^#\s*', '', line)
+        line = re.sub(r'\s*#.*$', '', line)
+
+        stripped_lines.append(line)
+
+    # Remove trailing empty lines
+    while stripped_lines and stripped_lines[-1] == "":
+        stripped_lines.pop()
+
+    dependency_lines = []
+    in_dependencies_section = False
+    signature_found = False
+    dependencies_section_found = False
+
+    for line_idx, line in enumerate(stripped_lines):
+        if not line:
+            continue
+
+        # Look for the script signature
+        if re.match(r"///\s*script$", line):
+            signature_found = True
+
+        if not signature_found:
+            continue
+
+        if not in_dependencies_section:
+            # Look for dependencies = [...] (single-line definition)
+            single_line_match = re.match(r'dependencies\s*=\s*\[(.*?)\]', line)
+            if single_line_match:
+                dependency_lines.append(single_line_match.group(1))
+                dependencies_section_found = True
+                break
+
+            # Look for the start of a multi-line dependencies = [
+            if re.match(r"^dependencies\s*=\s*\[$", line):
+                in_dependencies_section = True
+                dependencies_section_found = True
+                continue
+
+        else:
+            # Look for the end of the multi-line section ]
+            if line == "]":
+                in_dependencies_section = False
+                break
+
+            # Add each line of the multi-line section
+            dependency_lines.append(line)
+
+    if not signature_found:
+        return None  # Script signature not found
+
+    if in_dependencies_section:
+        raise InvalidDependenciesSection(f"line {line_idx + 1}: Dependencies section not closed")
+
+    # If the dependencies section was not found, return None
+    if not dependencies_section_found:
+        return None
+
+    # Extract dependencies from the collected lines
+    dependencies = []
+    for line in dependency_lines:
+        # Find all instances of "..." in the line and strip the quotes
+        for match in re.finditer(r'"([^"]+)"', line):
+            dependencies.append(match.group(1))
+    
+    return dependencies
 
 
 def find_third_party_packages(imports: Set[str]) -> List[str]:
@@ -65,18 +177,18 @@ def is_package_in_venv(package_name: str, venv_python: str) -> bool:
         return False  # If import fails, it's a third-party package
 
 
-def analyze_script(filepath: str) -> Tuple[Set[str], bool]:
+def analyze_script(text: str, filename: str) -> Tuple[Set[str], bool]:
     """
     Parse the script to find all import statements and check for the presence of a 'main' function.
 
     Args:
-        filepath (str): The path to the Python script to analyze.
+        text (str): Text of the Python script to analyze.
+        filename (str): Filename of the Python script to analyze
 
     Returns:
         Tuple[Set[str], bool]: A tuple containing a set of imported modules and a boolean indicating whether a 'main' function exists.
     """
-    with open(filepath, "r", encoding="utf-8") as file:
-        tree = ast.parse(file.read(), filename=filepath)
+    tree = ast.parse(text, filename=filename)
 
     # Collect imported modules
     imports = set()
@@ -241,11 +353,11 @@ def run_script(
             print("Error: Failed to install wheel", file=sys.stderr, flush=True)
             return result.returncode
 
-        for package in dependencies:
-            cmd = [venv_python, "-m", "pip", "install", package]
+        for dependency in dependencies:
+            cmd = [venv_python, "-m", "pip", "install", dependency]
             result = subprocess.run(cmd)
             if result.returncode != 0:
-                print(f"Error: Failed to install dependency: {package}", file=sys.stderr, flush=True)
+                print(f"Error: Failed to install dependency: {dependency}", file=sys.stderr, flush=True)
                 return result.returncode
 
         print("---", file=sys.stderr, flush=True)
@@ -308,7 +420,10 @@ def main() -> None:
         sys.exit(1)
 
     # Analyze the script for imports and the existence of a main function
-    imports, has_main = analyze_script(script_file)
+    with open(script_file, "r", encoding="utf-8") as inp:
+        script_text = inp.read()
+
+    imports, has_main = analyze_script(script_text, script_file)
 
     # Check for the presence of a 'main' function
     if not has_main:
@@ -316,13 +431,15 @@ def main() -> None:
         sys.exit(1)
 
     # Detect third-party packages
-    third_party_packages = find_third_party_packages(imports)
+    dependency_descriptions = parse_uv_script_style_dependencies(script_text)
+    if dependency_descriptions is None:
+        dependency_descriptions = find_third_party_packages(imports)
 
     if args.command == "install":
         if args.pyproject_toml:
             # Output the pyproject.toml content to stdout or install with pipx
-            pyproject_content = generate_pyproject_toml(script_file, third_party_packages)
-            print(pyproject_content)
+            pyproject_content = generate_pyproject_toml(script_file, dependency_descriptions)
+            print("\n".join(pyproject_content))
 
         # Use the absolute path of the script to avoid issues with relative paths
         abs_script_path = op.abspath(script_file)
@@ -334,13 +451,13 @@ def main() -> None:
             shutil.copy(abs_script_path, op.join(temp_dir, filename_for_package))
 
             # Generate pyproject.toml in the temporary directory
-            package_name = create_pyproject_toml_file(abs_script_path, third_party_packages, temp_dir)
+            package_name = create_pyproject_toml_file(abs_script_path, dependency_descriptions, temp_dir)
 
             # Install with pipx
             install_with_pipx(package_name, temp_dir, args.force, not args.no_pinning)
     elif args.command == "run":
         # Run the script with the provided arguments
-        exit_code = run_script(script_file, args.script_args, third_party_packages)
+        exit_code = run_script(script_file, args.script_args, dependency_descriptions)
         sys.exit(exit_code)
     else:
         print("Error: Unknown command.", file=sys.stderr, flush=True)
