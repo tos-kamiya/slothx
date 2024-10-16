@@ -438,8 +438,9 @@ def main() -> None:
     if args.command == "install":
         if args.pyproject_toml:
             # Output the pyproject.toml content to stdout or install with pipx
-            pyproject_content = generate_pyproject_toml(script_file, dependency_descriptions)
-            print("\n".join(pyproject_content))
+            pyproject_content, _ = generate_pyproject_toml(script_file, dependency_descriptions)
+            print(pyproject_content)
+            return
 
         # Use the absolute path of the script to avoid issues with relative paths
         abs_script_path = op.abspath(script_file)
