@@ -12,7 +12,7 @@ import venv
 from typing import List, Optional, Set, Tuple
 
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 
 
 class InvalidDependenciesSection(ValueError):
@@ -147,6 +147,7 @@ def find_third_party_packages(imports: Set[str]) -> List[str]:
 
         # Add to the list if the package cannot be imported in the virtual environment (i.e., third-party package)
         for package in imports:
+            package = package.split(".")[0]  # remove submodule name (e.g., "latex2mathml.converter" -> "latex2mathml")
             if not is_package_in_venv(package, venv_python):
                 third_party_packages.append(package)
 

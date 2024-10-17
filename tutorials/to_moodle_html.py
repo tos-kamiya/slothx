@@ -1,31 +1,50 @@
 import sys
 import argparse
 import re
+
 from bs4 import BeautifulSoup
 from markdown import markdown
+from latex2mathml.converter import convert as l2m_convert
+
 
 def format_latex_math_blocks(text):
     """
     Align the format of LaTeX equations.
-    Convert inline math `$...$` to `$$...$$`, keeping existing `$$...$$` as is.
+    Convert inline math `$...$` and block math `$$...$$` in to MathML.
     """
 
-    # Temporarily replace $$...$$ with a placeholder
-    placeholder = "PLACEHOLDER_FOR_DOUBLE_DOLLAR"
-    text = text.replace('$$', placeholder)
+    double_dollar_count = text.count("$")
+    if double_dollar_count % 2 != 0:
+        raise ValueError("The number of '$$' symbols is odd.")
 
-    # Use replace $ with $$
-    text = text.replace('$', '$$')
+    def replace_block_math(match):
+        s = match.group(1)
+        return l2m_convert(s, display="block")
 
-    # Restore the original $$...$$ from the placeholder
-    text = text.replace(placeholder, '$$')
+    text = re.sub(r"\$\$(.+?)\$\S", replace_block_math, text, flags=re.DOTALL | re.MULTILINE)
 
-    return text
+    r = []
+    for i, line in enumerate(text.split("\n")):
+        single_dollar_count = line.count("$")
+        if single_dollar_count % 2 != 0:
+            raise ValueError("The number of '$' symbols is odd: {line}")
+
+        # Convert inline math $...$
+        def replace_inline_math(match):
+            s = match.group(1)
+            return l2m_convert(s, display="inline")
+
+        line = re.sub(r"\$(.+?)\$", replace_inline_math, line)
+        r.append(line)
+
+    return "\n".join(r)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Convert markdown to Moodle-ish html")
     parser.add_argument(
-        'inputmd', type=str,
+        "inputmd",
+        type=str,
         help='Markdown file to process. "-" for read from the standard input)',
     )
     args = parser.parse_args()
@@ -44,24 +63,25 @@ def main():
         sys.exit(1)
 
     # Convert Markdown to HTML
-    html = markdown(text, extensions=['fenced_code', 'tables'])
-    soup = BeautifulSoup(html, 'html.parser')
+    html = markdown(text, extensions=["fenced_code", "tables"])
+    soup = BeautifulSoup(html, "html.parser")
 
     # Add border attribute to tables
     tables = soup.find_all("table")
     for t in tables:
-        t.attrs['border'] = '1'
+        t.attrs["border"] = "1"
 
     # Add style to <pre> tags
-    pres = soup.find_all('pre')
+    pres = soup.find_all("pre")
     for t in pres:
-        s = t.attrs.setdefault('style', '')
+        s = t.attrs.setdefault("style", "")
         s = s.rstrip()
-        if s and not s.endswith(';'):
-            s = s + ';'
-        t.attrs['style'] = s + 'background-color: #e8e8e8; padding: 10px;'
+        if s and not s.endswith(";"):
+            s = s + ";"
+        t.attrs["style"] = s + "background-color: #e8e8e8; padding: 10px;"
 
     print(soup.prettify())
+
 
 if __name__ == "__main__":
     main()
