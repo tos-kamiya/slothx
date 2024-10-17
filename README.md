@@ -168,4 +168,5 @@ This project is licensed under the MIT License.
 
 ## Changelog
 
+* v0.4.1: Correctly resolve package names with "import package.submodule". Updated `to_moodle_html.py` to include this functionality.
 * v0.4.0: Experimental support for uv-script style dependencies to enhance convenience and interoperability. For details on uv-script style dependencies, see: https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies
