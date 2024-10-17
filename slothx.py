@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 import ast
+import os
 import os.path as op
 import re
 import sys
 import subprocess
-import shutil
 import tempfile
 import argparse
 import venv
 from typing import List, Optional, Set, Tuple
 
 
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 
 
 class InvalidDependenciesSection(ValueError):
@@ -369,6 +369,22 @@ def run_script(
         return result.returncode
 
 
+def copy_script(orig_path: str, copy_path: str, add_stub_main: bool = False) -> None:
+    stat_info = os.stat(orig_path)
+    am_time = stat_info.st_atime, stat_info.st_mtime
+
+    with open(orig_path, 'rb') as f_orig:
+        data = f_orig.read()
+
+    if add_stub_main:
+        data = b'__name__, main = "__main__", lambda: None\n' + data
+
+    with open(copy_path, 'wb') as f_copy:
+        f_copy.write(data)
+
+    os.utime(copy_path, am_time)
+
+
 def main() -> None:
     """
     Main function to handle 'install' and 'run' subcommands.
@@ -426,11 +442,6 @@ def main() -> None:
 
     imports, has_main = analyze_script(script_text, script_file)
 
-    # Check for the presence of a 'main' function
-    if not has_main:
-        print(f"Error: 'main' function not found in {script_file}.", file=sys.stderr, flush=True)
-        sys.exit(1)
-
     # Detect third-party packages
     dependency_descriptions = parse_uv_script_style_dependencies(script_text)
     if dependency_descriptions is None:
@@ -450,7 +461,7 @@ def main() -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Copy the script to the temporary directory, replacing '-' with '_' in the filename
             filename_for_package = op.basename(abs_script_path).replace("-", "_")
-            shutil.copy(abs_script_path, op.join(temp_dir, filename_for_package))
+            copy_script(abs_script_path, op.join(temp_dir, filename_for_package), add_stub_main=not has_main)
 
             # Generate pyproject.toml in the temporary directory
             package_name = create_pyproject_toml_file(abs_script_path, dependency_descriptions, temp_dir)

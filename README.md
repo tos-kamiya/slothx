@@ -132,15 +132,14 @@ to-moodle-html = "to_moodle_html:main"
 
 The installation process with **Slothx** goes through the following steps:
 
-1. **Script Analysis**: **Slothx** uses Python's `ast` module to parse the script and extract all `import` statements. It checks for the existence of a `main` function in the script.
+1. **Script Analysis**: **Slothx** uses Python's `ast` module to parse the script and extract all `import` statements.
 2. **Dependency Detection**: It creates a temporary virtual environment to differentiate between standard library modules and third-party packages. Third-party packages are identified as those that cannot be imported in a clean virtual environment.
 3. **Pyproject Generation**: It generates a `pyproject.toml` file with the script's name and its detected third-party dependencies.
 4. **Installation with Pipx**: It uses `pipx` to install the script as a globally accessible command.
 
 ## Notes
 
-- Ensure that `pipx` is properly installed and available in your `PATH` before using Slothx. 
-- The tool assumes that your Python **script has a `main` function** as the entry point.
+- Ensure that `pipx` is properly installed and available in your `PATH` before using Slothx.
 - Some Python packages have **different names for the import statement and the pip package**. For example, the `opencv-python` package is installed via `pip`, but imported as `cv2` in your script. Slothx may fail to detect third-party dependencies correctly in such cases.
 
 ## Pinning Support<a id="pinning-support"></a>
@@ -168,5 +167,6 @@ This project is licensed under the MIT License.
 
 ## Changelog
 
+* v0.4.2: Enable to install script file missing main function, by generating dummy the main function as needed.
 * v0.4.1: Correctly resolve package names with "import package.submodule". Updated `to_moodle_html.py` to include this functionality.
 * v0.4.0: Experimental support for uv-script style dependencies to enhance convenience and interoperability. For details on uv-script style dependencies, see: https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies
