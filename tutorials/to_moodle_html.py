@@ -7,13 +7,36 @@ from markdown import markdown
 from latex2mathml.converter import convert as l2m_convert
 
 
+def split_code_block_iter(lines):
+    in_code_block = False
+    for line in lines:
+        m = re.match(r"^```\s*(.*)", line)
+        if m:
+            additional_desc = m.group(1)
+            if additional_desc:
+                in_code_block = True
+                yield None, line
+            else:
+                if not in_code_block:
+                    in_code_block = True
+                    yield None, line
+                else:
+                    in_code_block = False
+                    yield None, line
+        else:
+            if not in_code_block:
+                yield line, None
+            else:
+                yield None, line
+
+
 def format_latex_math_blocks(text):
     """
     Align the format of LaTeX equations.
     Convert inline math `$...$` and block math `$$...$$` in to MathML.
     """
 
-    double_dollar_count = text.count("$")
+    double_dollar_count = text.count("$$")
     if double_dollar_count % 2 != 0:
         raise ValueError("The number of '$$' symbols is odd.")
 
@@ -21,10 +44,16 @@ def format_latex_math_blocks(text):
         s = match.group(1)
         return l2m_convert(s, display="block")
 
-    text = re.sub(r"\$\$(.+?)\$\S", replace_block_math, text, flags=re.DOTALL | re.MULTILINE)
+    text = re.sub(r"\$\$(.+?)\$\$", replace_block_math, text, flags=re.DOTALL | re.MULTILINE)
 
+    it = split_code_block_iter(text.split("\n"))
     r = []
-    for i, line in enumerate(text.split("\n")):
+    for i, (line, code_block_line) in enumerate(it):
+        if line is None:
+            assert code_block_line is not None
+            r.append(code_block_line)
+            continue
+
         single_dollar_count = line.count("$")
         if single_dollar_count % 2 != 0:
             raise ValueError("The number of '$' symbols is odd: {line}")
